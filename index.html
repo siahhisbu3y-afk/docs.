@@ -1,0 +1,103 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Concord Docs</title><meta name="theme-color" content="#0a0a0a">
+<style>
+:root{--b:#0a0a0a;--p:#141414;--l:#262626;--t:#e8e8e8;--m:#888;--h:#1d1d1d}
+*{box-sizing:border-box}body{margin:0;background:var(--b);color:var(--t);font:14px Inter,system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit;background:var(--p);border:1px solid var(--l);border-radius:8px;padding:7px 12px}
+button{cursor:pointer}button:hover{background:var(--h)}.pri{background:#e8e8e8;color:#0a0a0a;border:0;font-weight:600}.pri:hover{background:#fff}
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--l);position:sticky;top:0;background:var(--b);z-index:5;height:53px}
+.logo{font-weight:700;letter-spacing:1px;cursor:pointer}.sp{flex:1}.av{width:28px;height:28px;border-radius:50%;vertical-align:middle}
+.wrap{display:flex;max-width:1200px;margin:auto}aside{width:220px;padding:16px;display:flex;flex-direction:column;gap:4px}
+aside a{padding:8px 12px;border-radius:8px;color:var(--m);cursor:pointer}aside a.on,aside a:hover{background:var(--p);color:var(--t)}
+main{flex:1;padding:16px;min-width:0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.card{background:var(--p);border:1px solid var(--l);border-radius:12px;padding:14px;cursor:pointer}.card:hover{border-color:#444}
+.card h4{margin:0 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}small,.m{color:var(--m)}
+.acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.acts button{padding:4px 8px;font-size:12px}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}.bar input{flex:1;min-width:140px}
+.note{background:var(--p);border:1px solid #444;border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.tb{display:flex;flex-wrap:wrap;gap:4px;padding:8px 16px;border-bottom:1px solid var(--l);background:var(--p);position:sticky;top:53px;z-index:4}
+.tb button,.tb select{padding:5px 9px}.tb input[type=color]{padding:0;width:32px;height:30px}
+.pg{max-width:816px;margin:24px auto;padding:0 12px}
+#ed{min-height:80vh;background:var(--p);border:1px solid var(--l);border-radius:4px;padding:56px 64px;outline:0;line-height:1.6;font-size:16px;overflow-wrap:anywhere}#ed a{color:#bbb}
+#t{flex:1;min-width:0;background:none;border:0;font-size:16px;font-weight:600}#wc{text-align:center;color:var(--m);padding-bottom:24px}
+table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid var(--l);text-align:left}.tw{overflow-x:auto}
+.login{min-height:100vh;display:grid;place-items:center;text-align:center}.login h1{letter-spacing:3px;margin:0 0 8px}
+.modal{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:9}.modal>div{background:var(--p);border:1px solid var(--l);border-radius:12px;padding:20px;width:min(360px,90vw);display:flex;flex-direction:column;gap:12px}
+@media(max-width:760px){.wrap{flex-direction:column}aside{width:auto;flex-direction:row;overflow-x:auto;padding:8px 12px}aside a{white-space:nowrap}#ed{padding:24px 18px}.nm{display:none}}
+</style></head><body><div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),app=$('#app'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let me,cur='all',folders=[],pend=null,tab='users',q='';
+const api=async(p,m='GET',b)=>{const r=await fetch('/api'+p,{method:m,headers:{'content-type':'application/json','x-csrf':'1'},body:b?JSON.stringify(b):undefined});if(r.status===401){me=null;login();throw 0}if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||r.status);return r.json()};
+const clean=h=>{const t=document.createElement('template');t.innerHTML=h;t.content.querySelectorAll('script,iframe,object,embed,style,link,meta,form').forEach(e=>e.remove());t.content.querySelectorAll('*').forEach(e=>[...e.attributes].forEach(a=>{if(/^on/i.test(a.name)||/^\s*javascript:/i.test(a.value))e.removeAttribute(a.name)}));return t.innerHTML};
+const ago=t=>{const s=(Date.now()-t)/1e3;return s<60?'just now':s<3600?(s/60|0)+'m ago':s<86400?(s/3600|0)+'h ago':new Date(t).toLocaleDateString()};
+const ask=(title,val='',opts)=>new Promise(res=>{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div><b>${esc(title)}</b>${opts?`<select>${opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select>`:`<input value="${esc(val)}">`}<span style="display:flex;gap:8px;justify-content:flex-end"><button class=x>Cancel</button><button class="pri ok">OK</button></span></div>`;document.body.append(m);const i=m.querySelector('input,select');i.focus();const d=v=>{m.remove();res(v)};m.querySelector('.x').onclick=()=>d(null);m.querySelector('.ok').onclick=()=>d(i.value);i.onkeydown=e=>e.key==='Enter'&&d(i.value)});
+const header=(mid='')=>`<header class=top><span class=logo onclick="location.hash='#/'">CONCORD <span class=m>DOCS</span></span>${mid}<span class=sp></span><span class=nm>${esc(me.name)}</span><img class=av src="${esc(me.picture)}" referrerpolicy=no-referrer>${['owner','admin'].includes(me.role)?'<button data-a=admin>Admin</button>':''}<button data-a=out>Sign out</button></header>`;
+function login(){app.innerHTML=`<div class=login><div><h1>CONCORD</h1><p class=m>Docs for Concord Studios</p><br><a href="/api/auth/login"><button class=pri style="padding:12px 22px">Continue with Google</button></a></div></div>`}
+async function route(){
+ if(pend){await pend();pend=null}
+ if(me===undefined)me=await fetch('/api/me').then(r=>r.json()).catch(()=>null);
+ if(!me)return login();
+ const h=location.hash;
+ try{if(h.startsWith('#/doc/'))await editor(h.slice(6));else if(h==='#/admin')await admin();else await home()}catch(e){if(e)app.innerHTML=header()+`<main><p class=m>${esc(e.message)}</p></main>`}
+}
+async function home(){
+ const [d,f]=await Promise.all([api('/docs'+(cur==='trash'?'?trash=1':'')),api('/folders')]);folders=f;
+ const isF=f.some(x=>x.id===cur),fn=id=>f.find(x=>x.id===id)?.name;
+ let L=d.filter(x=>(!isF||x.folder_id===cur)&&x.title.toLowerCase().includes(q.toLowerCase()));
+ app.innerHTML=header()+`<div class=wrap><aside><a data-a=cur data-v=all class="${cur==='all'?'on':''}">All documents</a>${f.map(x=>`<a data-a=cur data-v="${x.id}" class="${cur===x.id?'on':''}">📁 ${esc(x.name)}</a>`).join('')}<a data-a=cur data-v=trash class="${cur==='trash'?'on':''}">Trash</a><a data-a=nf>+ New folder</a></aside><main>
+ ${me.announcement?`<div class=note>${esc(me.announcement)}</div>`:''}
+ <div class=bar><input id=sq placeholder="Search documents" value="${esc(q)}">${isF?'<button data-a=rf>Rename folder</button><button data-a=df>Delete folder</button>':''}${cur==='trash'?'':'<button class=pri data-a=new>+ New document</button>'}</div>
+ <div class=grid>${L.map(x=>`<div class=card data-id="${x.id}"><h4>${esc(x.title)}</h4><small>${x.folder_id&&fn(x.folder_id)?'📁 '+esc(fn(x.folder_id))+' · ':''}${ago(x.updated_at)}</small><div class=acts>${cur==='trash'?'<button data-a=rs>Restore</button><button data-a=del>Delete forever</button>':'<button data-a=rn>Rename</button><button data-a=mv>Move</button><button data-a=tr>Trash</button>'}</div></div>`).join('')||'<p class=m>Nothing here yet.</p>'}</div></main></div>`;
+ const s=$('#sq');s.oninput=()=>{q=s.value;const p=s.selectionStart;home().then(()=>{const n=$('#sq');n.focus();n.setSelectionRange(p,p)})};
+}
+async function editor(id){
+ const d=await api('/docs/'+id),B=(c,l,v='')=>`<button data-c=${c} data-v="${v}">${l}</button>`;
+ app.innerHTML=header(`<input id=t value="${esc(d.title)}" maxlength=200><span id=ss class=m>Saved</span>`)+`<div class=tb id=tb><select data-c=formatBlock><option value=p>Normal</option><option value=h1>Heading 1</option><option value=h2>Heading 2</option><option value=h3>Heading 3</option><option value=blockquote>Quote</option></select><select data-c=fontSize><option value=3>Size</option><option value=2>Small</option><option value=3>Normal</option><option value=5>Large</option><option value=7>Huge</option></select>${B('undo','↶')}${B('redo','↷')}${B('bold','<b>B</b>')}${B('italic','<i>I</i>')}${B('underline','<u>U</u>')}${B('strikeThrough','<s>S</s>')}<input type=color data-c=foreColor value="#e8e8e8">${B('justifyLeft','⇤')}${B('justifyCenter','↔')}${B('justifyRight','⇥')}${B('insertUnorderedList','• List')}${B('insertOrderedList','1. List')}${B('outdent','⇠')}${B('indent','⇢')}${B('createLink','Link')}${B('insertHorizontalRule','―')}${B('removeFormat','Clear')}<button onclick="print()">Print</button></div><div class=pg><div id=ed contenteditable=true spellcheck=true></div></div><div id=wc></div>`;
+ const ed=$('#ed'),t=$('#t'),ss=$('#ss');ed.innerHTML=clean(d.content);
+ const count=()=>{const w=(ed.innerText.match(/\S+/g)||[]).length;$('#wc').textContent=w+' words · '+ed.innerText.length+' characters'};count();
+ let tm;const flush=async()=>{clearTimeout(tm);pend=null;try{await api('/docs/'+id,'PATCH',{title:t.value.trim()||'Untitled document',content:ed.innerHTML});ss.textContent='Saved'}catch(e){ss.textContent='Offline — retrying…';pend=flush;tm=setTimeout(flush,4000)}};
+ const mark=()=>{ss.textContent='Saving…';pend=flush;clearTimeout(tm);tm=setTimeout(flush,800);count()};
+ ed.oninput=t.oninput=mark;
+ ed.onkeydown=t.onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();flush()}};
+ onbeforeunload=()=>pend?(flush(),'Saving…'):null;
+ const tb=$('#tb');tb.onmousedown=e=>{if(e.target.closest('button'))e.preventDefault()};
+ tb.onclick=e=>{const b=e.target.closest('button[data-c]');if(!b)return;let v=b.dataset.v||null;if(b.dataset.c==='createLink'){v=prompt('Link URL');if(!v)return;if(!/^(https?:|mailto:)/i.test(v))v='https://'+v}ed.focus();document.execCommand(b.dataset.c,false,v);mark()};
+ tb.onchange=e=>{const c=e.target.dataset.c;if(!c)return;ed.focus();document.execCommand(c,false,c==='formatBlock'?'<'+e.target.value+'>':e.target.value);mark()};
+}
+async function admin(){
+ if(!['owner','admin'].includes(me.role)){location.hash='#/';return}
+ const own=me.role==='owner';let body='';
+ if(tab==='users'){const u=await api('/admin/users');body=`<div class=tw><table><tr><th>User<th>Role<th></tr>${u.map(x=>`<tr data-id="${x.id}"><td>${esc(x.name)}<br><small>${esc(x.email)}</small><td>${own&&x.role!=='owner'?`<select data-a=role><option ${x.role==='user'?'selected':''}>user<option ${x.role==='admin'?'selected':''}>admin</select>`:x.role}<td>${x.role==='owner'||x.id===me.id?'':`<button data-a=ban data-v=${x.disabled?0:1}>${x.disabled?'Enable':'Disable'}</button> ${own?'<button data-a=udel>Delete</button>':''}`}</tr>`).join('')}</table></div>`}
+ else if(tab==='docs'){const d=await api('/admin/docs');body=`<div class=tw><table><tr><th>Title<th>Owner<th>Updated<th></tr>${d.map(x=>`<tr data-id="${x.id}"><td>${esc(x.title)}<td>${esc(x.email)}<td>${ago(x.updated_at)}<td><button data-a=ddel>Delete</button></tr>`).join('')}</table></div>`}
+ else{const s=await api('/admin/settings');body=`<p><label><input type=checkbox id=su ${s.signups==='1'?'checked':''} ${own?'':'disabled'}> Allow new sign-ups</label></p><p><input id=an style="width:100%" maxlength=300 placeholder="Site-wide announcement (shown on every home page)" value="${esc(s.announcement)}" ${own?'':'disabled'}></p>${own?'<button class=pri data-a=ss>Save settings</button>':'<p class=m>Only the owner can change settings.</p>'}`}
+ app.innerHTML=header()+`<main style="max-width:900px;margin:auto"><div class=bar><button data-a=home>← Docs</button>${['users','docs','settings'].map(x=>`<button data-a=tab data-v=${x} class="${tab===x?'pri':''}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div>${body}</main>`;
+}
+app.onchange=async e=>{const a=e.target.dataset.a;if(a==='role'){try{await api('/admin/users/'+e.target.closest('[data-id]').dataset.id,'PATCH',{role:e.target.value})}catch(x){alert(x.message)}}};
+app.onclick=async e=>{
+ const b=e.target.closest('[data-a]'),c=e.target.closest('.card');
+ if(!b){if(c&&cur!=='trash')location.hash='#/doc/'+c.dataset.id;return}
+ const a=b.dataset.a,v=b.dataset.v,id=b.closest('[data-id]')?.dataset.id;if(a==='role')return;
+ try{
+  if(a==='out'){await api('/auth/logout','POST');me=null;return login()}
+  if(a==='admin'){location.hash='#/admin';return}
+  if(a==='home'){location.hash='#/';return}
+  if(a==='new'){const d=await api('/docs','POST',{folder_id:folders.some(f=>f.id===cur)?cur:null});location.hash='#/doc/'+d.id;return}
+  if(a==='cur'){cur=v;q=''}
+  if(a==='nf'){const n=await ask('Folder name');if(n)await api('/folders','POST',{name:n})}
+  if(a==='rf'){const n=await ask('Rename folder',folders.find(f=>f.id===cur).name);if(n)await api('/folders/'+cur,'PATCH',{name:n})}
+  if(a==='df'&&confirm('Delete this folder? Documents inside are kept.')){await api('/folders/'+cur,'DELETE');cur='all'}
+  if(a==='rn'){const n=await ask('Rename document',c.querySelector('h4').textContent);if(n)await api('/docs/'+id,'PATCH',{title:n})}
+  if(a==='mv'){const f=await ask('Move to folder','',[['','No folder'],...folders.map(f=>[f.id,f.name])]);if(f!==null)await api('/docs/'+id,'PATCH',{folder_id:f})}
+  if(a==='tr')await api('/docs/'+id,'PATCH',{trashed:1});
+  if(a==='rs')await api('/docs/'+id,'PATCH',{trashed:0});
+  if(a==='del'){if(!confirm('Delete forever? This cannot be undone.'))return;await api('/docs/'+id,'DELETE')}
+  if(a==='tab'){tab=v}
+  if(a==='ban')await api('/admin/users/'+id,'PATCH',{disabled:+v});
+  if(a==='udel'){if(!confirm('Delete this user and all their documents?'))return;await api('/admin/users/'+id,'DELETE')}
+  if(a==='ddel'){if(!confirm('Delete this document?'))return;await api('/admin/docs/'+id,'DELETE')}
+  if(a==='ss'){await api('/admin/settings','PUT',{signups:$('#su').checked,announcement:$('#an').value});alert('Saved');return}
+  route();
+ }catch(x){if(x)alert(x.message)}
+};
+addEventListener('hashchange',route);route();
+</script></body></html>

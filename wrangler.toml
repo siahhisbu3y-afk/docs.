@@ -1,0 +1,17 @@
+name = "concord-docs"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+routes = [{ pattern = "docs.concordstudios.lol", custom_domain = true }]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[vars]
+OWNER_EMAIL = "CHANGE_ME@gmail.com"
+GOOGLE_CLIENT_ID = "CHANGE_ME.apps.googleusercontent.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "concord-docs"
