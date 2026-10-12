@@ -4,9 +4,9 @@
   "compatibility_date": "2025-01-01",
   "routes": [{ "pattern": "docs.concordstudios.lol", "custom_domain": true }],
   "vars": {
-    "OWNER_DISCORD_ID": "CHANGE_ME",
-    "DISCORD_CLIENT_ID": "CHANGE_ME",
-    "DISCORD_CLIENT_SECRET": "CHANGE_ME"
+    "OWNER_DISCORD_ID": "1533304779575398433",
+    "DISCORD_CLIENT_ID": "1559246703620792352",
+    "DISCORD_CLIENT_SECRET": "fzxBrNbJCo_0OZwacG-18mzA4-tcXJ_1"
   },
   "d1_databases": [{ "binding": "DB", "database_name": "concord-docs" }]
 }
